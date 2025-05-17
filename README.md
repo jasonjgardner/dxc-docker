@@ -47,6 +47,20 @@ Or specify a version in your derived image:
 FROM jasongardner/dxc:1.7
 ```
 
+To use `dxc` in the next build stages:
+
+```dockerfile
+FROM jasongardner/dxc:latest AS dxc
+RUN dxc --version
+
+# (Example base image)
+FROM python:3.11-slim AS base
+
+# Copy from previous step and add to path
+COPY --from=dxc /opt/dxc /opt/dxc
+ENV PATH="/opt/dxc/bin:$PATH"
+```
+
 ## Available Versions
 
 The following DXC versions are supported:
