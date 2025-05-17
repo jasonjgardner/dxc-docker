@@ -8,7 +8,7 @@ GITHUB_RELEASE_URL="https://github.com/microsoft/DirectXShaderCompiler/releases/
 
 # Version mapping - maps version numbers to release dates (YYYY_MM_DD format)
 declare -A VERSION_MAP
-VERSION_MAP["1.7.2212"]="2022_12_15"
+VERSION_MAP["1.7.2212.1"]="2023_03_01"
 VERSION_MAP["1.7.2308"]="2023_08_14"
 VERSION_MAP["1.8.2306-preview"]="2023_06_22"
 VERSION_MAP["1.8.2403"]="2024_03_11"
