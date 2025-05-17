@@ -17,10 +17,10 @@ VERSION_MAP["1.8.2403.2"]="2024_04_02"
 VERSION_MAP["1.8.2405"]="2024_05_28"
 VERSION_MAP["1.8.2405-mesh-nodes-preview"]="2024_07_18"
 VERSION_MAP["1.8.2407"]="2024_07_31"
-VERSION_MAP["1.8.2502"]="2025_02_20"  # Fixed date code to match actual asset
+VERSION_MAP["1.8.2502"]="2025_02_20"
 
 # Default version (latest stable)
-DEFAULT_VERSION="1.8.2502"
+DEFAULT_VERSION="${DXC_VERSION:-1.8.2502}"
 
 # Function to verify if a file is a valid tar.gz archive
 verify_tar_gz() {
@@ -61,6 +61,16 @@ install_dxc_version() {
     # Skip if already installed
     if [ -x "${install_dir}/bin/dxc" ]; then
         echo "DXC version $version is already installed" >&2
+        
+        # Ensure symlinks are created
+        ln -sf "${install_dir}/bin/dxc" "${DXC_BASE_DIR}/bin/dxc"
+        if [ "$(ls -A "${install_dir}/lib/" 2>/dev/null)" ]; then
+            ln -sf "${install_dir}/lib/"* "${DXC_BASE_DIR}/lib/"
+        fi
+        if [ "$(ls -A "${install_dir}/include/" 2>/dev/null)" ]; then
+            ln -sf "${install_dir}/include/"* "${DXC_BASE_DIR}/include/"
+        fi
+        
         return 0
     fi
     
@@ -132,27 +142,67 @@ install_dxc_version() {
         return 1
     fi
     
+    # Debug: Show the extracted directory structure
+    echo "Extracted archive contents:" >&2
+    find "${temp_dir}" -type f | sort >&2
+    
     # Create bin, lib, and include directories
     mkdir -p "${install_dir}/bin" "${install_dir}/lib" "${install_dir}/include"
     
     # Find and move the files to the correct locations
     # First, check if we have the expected files
-    if find "${temp_dir}" -name "dxc" -type f -executable | grep -q .; then
+    if find "${temp_dir}" -name "dxc" -type f | grep -q .; then
         # Move dxc executable to bin directory
-        find "${temp_dir}" -name "dxc" -type f -executable -exec mv {} "${install_dir}/bin/" \;
+        find "${temp_dir}" -name "dxc" -type f -exec cp {} "${install_dir}/bin/" \;
+        chmod +x "${install_dir}/bin/dxc"
         
         # Move library files to lib directory
-        find "${temp_dir}" -name "libdxcompiler.so*" -type f -exec mv {} "${install_dir}/lib/" \;
-        find "${temp_dir}" -name "libdxil.so*" -type f -exec mv {} "${install_dir}/lib/" \;
+        find "${temp_dir}" -name "libdxcompiler.so*" -type f -exec cp {} "${install_dir}/lib/" \;
+        find "${temp_dir}" -name "libdxil.so*" -type f -exec cp {} "${install_dir}/lib/" \;
         
         # Move header files to include directory
-        find "${temp_dir}" -name "*.h" -type f -exec mv {} "${install_dir}/include/" \;
+        find "${temp_dir}" -name "*.h" -type f -exec cp {} "${install_dir}/include/" \;
     else
-        echo "Error: Could not find dxc executable in the extracted archive" >&2
-        echo "Archive structure may be different than expected" >&2
-        ls -la "${temp_dir}"
-        rm -rf "${temp_dir}"
-        return 1
+        # Try to find the dxc executable in any subdirectory
+        echo "Searching for dxc executable in subdirectories..." >&2
+        
+        # Look for any executable file that might be dxc
+        local dxc_candidates=$(find "${temp_dir}" -type f -executable)
+        if [ -n "$dxc_candidates" ]; then
+            echo "Found executable candidates:" >&2
+            echo "$dxc_candidates" >&2
+            
+            # Try to identify dxc by checking file output
+            for candidate in $dxc_candidates; do
+                if file "$candidate" | grep -q "ELF.*executable"; then
+                    echo "Found potential DXC executable: $candidate" >&2
+                    cp "$candidate" "${install_dir}/bin/dxc"
+                    chmod +x "${install_dir}/bin/dxc"
+                    break
+                fi
+            done
+        fi
+        
+        # Look for library files
+        local lib_candidates=$(find "${temp_dir}" -name "*.so*" -type f)
+        if [ -n "$lib_candidates" ]; then
+            echo "Found library candidates:" >&2
+            echo "$lib_candidates" >&2
+            
+            # Copy all .so files to lib directory
+            for lib in $lib_candidates; do
+                cp "$lib" "${install_dir}/lib/"
+            done
+        fi
+        
+        # Look for header files
+        local header_candidates=$(find "${temp_dir}" -name "*.h" -type f)
+        if [ -n "$header_candidates" ]; then
+            # Copy all .h files to include directory
+            for header in $header_candidates; do
+                cp "$header" "${install_dir}/include/"
+            done
+        fi
     fi
     
     # Clean up temporary directory
@@ -163,6 +213,7 @@ install_dxc_version() {
         chmod +x "${install_dir}/bin/dxc"
     else
         echo "Error: dxc executable not found after installation" >&2
+        echo "Archive structure may be different than expected" >&2
         return 1
     fi
     
@@ -180,6 +231,12 @@ install_dxc_version() {
     # Only create include symlinks if there are files to link
     if [ "$(ls -A "${install_dir}/include/" 2>/dev/null)" ]; then
         ln -sf "${install_dir}/include/"* "${DXC_BASE_DIR}/include/"
+    fi
+    
+    # Verify the installation
+    if [ ! -x "${DXC_BASE_DIR}/bin/dxc" ]; then
+        echo "Error: DXC executable symlink not found after installation" >&2
+        return 1
     fi
     
     echo "Successfully installed DXC version $version" >&2

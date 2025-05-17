@@ -10,20 +10,6 @@ This Docker image provides the [DirectX Compiler](https://github.com/microsoft/D
 - Automatically downloads and caches requested versions
 - Exposes `dxc` in PATH for easy access
 
-## Building the Image
-
-To build the Docker image:
-
-```bash
-docker build -t dxc:latest .
-```
-
-You can specify a default DXC version during build time:
-
-```bash
-docker build --build-arg DXC_VERSION=1.7.2308 -t dxc:1.7 .
-```
-
 ## Usage
 
 ### Direct Usage
@@ -31,19 +17,19 @@ docker build --build-arg DXC_VERSION=1.7.2308 -t dxc:1.7 .
 Run DXC with the default version:
 
 ```bash
-docker run dxc [DXC_ARGS...]
+docker run jasongardner/dxc [DXC_ARGS...]
 ```
 
 Specify a different version at runtime:
 
 ```bash
-docker run dxc --v=1.8.2405 [DXC_ARGS...]
+docker run jasongardner/dxc --v=1.8.2405 [DXC_ARGS...]
 ```
 
 Example: Compile a shader with a specific version:
 
 ```bash
-docker run -v $(pwd):/work -w /work dxc --v=1.8.2405 -T ps_6_0 -E main shader.hlsl -Fo shader.bin
+docker run -v $(pwd):/work -w /work jasongardner/dxc --v=1.8.2405 -T ps_6_0 -E main shader.hlsl -Fo shader.bin
 ```
 
 ### Using as a Base Image
@@ -51,17 +37,14 @@ docker run -v $(pwd):/work -w /work dxc --v=1.8.2405 -T ps_6_0 -E main shader.hl
 You can use this image as a base in your own Dockerfile:
 
 ```dockerfile
-FROM dxc:latest
+FROM jasongardner/dxc:latest
 # dxc now in PATH
 ```
 
 Or specify a version in your derived image:
 
 ```dockerfile
-FROM dxc:latest
-
-# Install your version at build time
-RUN /opt/dxc/entrypoint.sh --v=1.7.2308
+FROM jasongardner/dxc:1.7
 ```
 
 ## Available Versions
@@ -78,6 +61,20 @@ The following DXC versions are supported:
 - [1.7.2308 (August 2023)](https://github.com/microsoft/DirectXShaderCompiler/releases/tag/v1.7.2308)
 - [1.7.2212 (December 2022)](https://github.com/microsoft/DirectXShaderCompiler/releases/tag/v1.7.2212)
 - [1.7.2207 (July 2022)](https://github.com/microsoft/DirectXShaderCompiler/releases/tag/v1.7.2207)
+
+## Building the Image
+
+To build the Docker image:
+
+```bash
+docker build -t jasongardner/dxc:latest .
+```
+
+You can specify a default DXC version during build time:
+
+```bash
+docker build --build-arg DXC_VERSION=1.7.2308 -t jasongardner/dxc:1.7 .
+```
 
 ## License
 
